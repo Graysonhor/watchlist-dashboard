@@ -349,7 +349,7 @@
 
 <script>
 (function(){
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  const API_BASE = 'https://watchlist-dashboard-khaki.vercel.app/';
 
   function genId(prefix){
     return (prefix || 'id') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
