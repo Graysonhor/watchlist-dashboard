@@ -276,6 +276,7 @@
   <header class="topbar">
     <span class="app-title">Watchlist</span>
     <div class="topbar-right">
+      <span class="count-pill" id="cloudStatus">Cloud: loading…</span>
       <span class="count-pill"><b id="totalCount">0</b> 支 · <b id="totalLists">0</b> 分类</span>
       <button class="icon-btn" id="addToggleBtn" title="添加股票">+</button>
     </div>
@@ -342,7 +343,7 @@
   </div>
 
   <footer>
-自动保存到云端 · 也可以从「⋯」导出备份。
+Cloud Sync 已开启 · 所有设备使用同一份 Watchlist · 也可以从「⋯」导出备份。
   </footer>
 
 </div>
@@ -350,46 +351,84 @@
 <script>
 (function(){
   const API_BASE = '';
+  const USER_ID = 'default_user';
 
   function genId(prefix){
     return (prefix || 'id') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  async function loadState(){
-    try{
-      const res = await fetch(`${API_BASE}/api/getState`, { method: 'GET' });
-      if(res.ok){
-        const data = await res.json();
-        if(data && data.lists && Array.isArray(data.lists) && data.lists.length){
-          return data;
-        }
-      }
-    }catch(e){
-      console.error('Failed to load state from API:', e);
-    }
-    // Fallback: empty state
-    const listId = genId('l');
-    return { lists: [{ id: listId, name: '默认', groups: [{ id: genId('g'), name: '股票', collapsed: false, symbols: [] }] }], activeListId: listId };
+  const cloudStatusEl = document.getElementById('cloudStatus');
+
+  function setCloudStatus(text){
+    if(cloudStatusEl) cloudStatusEl.textContent = text;
   }
 
-  let savePending = null;
-  function saveState(){
-    clearTimeout(savePending);
-    savePending = setTimeout(async () => {
-      try{
-        const res = await fetch(`${API_BASE}/api/setState`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(state)
-        });
-        if(!res.ok){
-          const msg = await res.text();
-          throw new Error(`Save failed (${res.status}): ${msg}`);
-        }
-      }catch(e){
-        console.error('Failed to save state to API:', e);
+  async function loadState(){
+    try{
+      setCloudStatus('Cloud: loading…');
+      const res = await fetch(`${API_BASE}/api/getState?userId=${encodeURIComponent(USER_ID)}&_=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      const raw = await res.text();
+      if(!res.ok) throw new Error(`GET ${res.status}: ${raw}`);
+
+      const data = JSON.parse(raw);
+      if(data && Array.isArray(data.lists) && data.lists.length){
+        setCloudStatus('Cloud: synced ✓');
+        return data;
       }
-    }, 300);
+
+      throw new Error('Invalid state returned by server');
+    }catch(e){
+      console.error('Failed to load state from cloud:', e);
+      setCloudStatus('Cloud: load error');
+      const listId = genId('l');
+      return {
+        lists: [{
+          id: listId,
+          name: '默认',
+          groups: [{ id: genId('g'), name: '股票', collapsed: false, symbols: [] }]
+        }],
+        activeListId: listId
+      };
+    }
+  }
+
+  let saveChain = Promise.resolve();
+
+  function saveState(){
+    if(!state) return Promise.resolve();
+
+    const snapshot = JSON.stringify(state);
+    setCloudStatus('Cloud: saving…');
+
+    saveChain = saveChain.then(async () => {
+      const res = await fetch(`${API_BASE}/api/setState?userId=${encodeURIComponent(USER_ID)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: snapshot
+      });
+
+      const raw = await res.text();
+      if(!res.ok) throw new Error(`POST ${res.status}: ${raw}`);
+
+      let result = {};
+      try { result = JSON.parse(raw); } catch (_) {}
+
+      if(result.success !== true){
+        throw new Error(raw || 'Server did not confirm save');
+      }
+
+      setCloudStatus('Cloud: saved ✓');
+    }).catch((e) => {
+      console.error('Failed to save state to cloud:', e);
+      setCloudStatus('Cloud: SAVE ERROR');
+    });
+
+    return saveChain;
   }
 
   let state = null;
