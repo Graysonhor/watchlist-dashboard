@@ -447,8 +447,20 @@ Cloud Sync 已开启 · 所有设备使用同一份 Watchlist · 也可以从「
   const bulkTargetNameEl = document.getElementById('bulkTargetName');
   const groupSelect = document.getElementById('groupSelect');
 
-  function getActiveList(){
-    return state.lists.find(l => l.id === state.activeListId) || state.lists[0];
+  const list = getActiveList();
+
+if (!list.groups || list.groups.length === 0) {
+  list.groups = [{
+    id: genId('g'),
+    name: '股票',
+    collapsed: false,
+    symbols: []
+  }];
+}
+
+const group =
+  list.groups.find(g => g.id === groupSelect.value)
+  || list.groups[0];
   }
 
   function normalizeSymbol(raw){
