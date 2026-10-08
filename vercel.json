@@ -12,8 +12,12 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/getState",
+      "dest": "/api/getState.js"
+    },
+    {
+      "src": "/api/setState",
+      "dest": "/api/setState.js"
     },
     {
       "src": "/.*",
