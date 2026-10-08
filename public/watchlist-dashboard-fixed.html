@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Watchlist — 无限股票追踪台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0C10;
+    --surface: #12151C;
+    --surface-2: #171B24;
+    --border: #242938;
+    --border-hover: #37405A;
+    --text: #E7E9EE;
+    --text-dim: #838B9E;
+    --text-faint: #545B6E;
+    --accent: #4F8CFF;
+    --accent-dim: #2C3E63;
+    --pos: #21C77A;
+    --neg: #FF5C5C;
+    --radius: 6px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection{ background: var(--accent-dim); color: var(--text); }
+  .mono{ font-family: 'JetBrains Mono', monospace; }
+  a{ color: inherit; text-decoration: none; }
+  button{ font-family: inherit; cursor: pointer; }
+  input, textarea, select{ font-family: inherit; }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 24px 24px 70px; }
+
+  .topbar{
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .app-title{ font-size: 14px; font-weight: 600; color: var(--text-dim); letter-spacing: .03em; }
+  .topbar-right{ display: flex; align-items: center; gap: 10px; }
+
+  .count-pill{
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 5px 11px; border-radius: 999px; white-space: nowrap;
+  }
+  .count-pill b{ color: var(--text); font-weight: 600; }
+
+  .icon-btn{
+    width: 28px; height: 28px; border-radius: var(--radius); background: var(--surface);
+    border: 1px solid var(--border); color: var(--text-dim); font-size: 15px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .icon-btn:hover{ border-color: var(--border-hover); color: var(--text); }
+
+  /* --- List (watchlist) tabs --- */
+  .list-tabs{
+    display: flex; align-items: center; gap: 2px;
+    border-bottom: 1px solid var(--border); flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .list-tab{
+    display: flex; align-items: center; gap: 8px; padding: 10px 6px 10px 14px;
+    font-size: 14px; color: var(--text-dim); background: none; border: none;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .list-tab .tab-count{ font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint); }
+  .list-tab.active{ color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .list-tab.active .tab-count{ color: var(--text-dim); }
+  .list-tab:hover{ color: var(--text); }
+  .tab-del{
+    background: none; border: none; color: var(--text-faint); font-size: 15px;
+    line-height: 1; padding: 4px 8px 4px 2px; opacity: 0;
+  }
+  .list-tab:hover .tab-del{ opacity: .55; }
+  .tab-del:hover{ opacity: 1 !important; color: var(--neg); }
+  .add-list-tab{
+    padding: 10px 14px; color: var(--accent); font-size: 14px; background: none;
+    border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  }
+  .add-list-tab:hover{ text-decoration: underline; }
+
+  .panel{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  .add-panel{ display: none; }
+  .add-panel.open{ display: block; }
+
+  .active-list-label{ font-size: 12px; color: var(--text-faint); margin-bottom: 12px; }
+  .active-list-label b{ color: var(--text-dim); font-weight: 600; }
+
+  .add-row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .field{ display: flex; flex-direction: column; gap: 6px; flex: 1 1 160px; }
+  .field label{ font-size: 12px; color: var(--text-faint); }
+
+  input[type="text"], textarea, select{
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 11px; border-radius: var(--radius); font-size: 14px; outline: none; width: 100%;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus{ border-color: var(--accent); }
+  input[type="text"].mono-input{ font-family: 'JetBrains Mono', monospace; }
+
+  .btn{
+    background: var(--accent); color: #fff; border: none; padding: 10px 18px;
+    border-radius: var(--radius); font-size: 14px; font-weight: 600; white-space: nowrap;
+  }
+  .btn:hover{ filter: brightness(1.08); }
+  .btn-ghost{
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 9px 14px; border-radius: var(--radius); font-size: 13px;
+  }
+  .btn-ghost:hover{ border-color: var(--border-hover); color: var(--text); }
+
+  .hint-details{ margin-top: 10px; }
+  .hint-details summary{
+    font-size: 12px; color: var(--text-faint); cursor: pointer; list-style: none;
+  }
+  .hint-details summary::-webkit-details-marker{ display: none; }
+  .hint-details summary:hover{ color: var(--text-dim); }
+  .hint-details summary::before{ content: 'ⓘ '; }
+  .hint{ font-size: 12px; color: var(--text-faint); margin-top: 8px; line-height: 1.6; }
+  .hint a{ color: var(--accent); }
+  .hint a:hover{ text-decoration: underline; }
+
+  .toggle-bulk{ font-size: 13px; color: var(--accent); background: none; border: none; padding: 0; margin-top: 12px; }
+  .toggle-bulk:hover{ text-decoration: underline; }
+  .bulk-area{ display: none; margin-top: 14px; gap: 10px; flex-direction: column; }
+  .bulk-area.open{ display: flex; }
+  .bulk-area textarea{ min-height: 72px; resize: vertical; }
+
+  .toolbar{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .search-box{ flex: 1 1 220px; max-width: 320px; }
+  .chips{ display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip{
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 13px; border-radius: 999px; font-size: 13px;
+  }
+  .chip.active{ background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+  .chip:hover{ border-color: var(--border-hover); }
+  .util-buttons{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }
+
+  .menu-wrap{ position: relative; }
+  .dropdown-menu{
+    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 10;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    min-width: 160px; padding: 4px; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .dropdown-menu.open{ display: flex; }
+  .dropdown-menu button{
+    background: none; border: none; color: var(--text-dim); font-size: 13px; text-align: left;
+    padding: 8px 10px; border-radius: 4px; white-space: nowrap;
+  }
+  .dropdown-menu button:hover{ background: var(--surface); color: var(--text); }
+  .dropdown-menu .menu-danger:hover{ color: var(--neg); }
+
+  /* --- Groups & rows (TradingView-style watchlist) --- */
+  .groups-wrap{ display: flex; flex-direction: column; gap: 4px; }
+
+  .group-block{ border-bottom: 1px solid var(--border); }
+  .group-block.drag-over{ outline: 1px dashed var(--accent); outline-offset: -1px; }
+
+  .group-header{
+    display: flex; align-items: center; gap: 8px; padding: 10px 4px;
+    cursor: pointer; user-select: none;
+  }
+  .group-drag-handle{
+    color: var(--text-faint); font-size: 14px; cursor: grab; padding: 0 4px; opacity: .5;
+  }
+  .group-header:hover .group-drag-handle{ opacity: 1; }
+  .chevron{ color: var(--text-faint); font-size: 11px; width: 12px; display: inline-block; }
+  .group-name{
+    font-size: 12px; font-weight: 600; letter-spacing: .04em; color: var(--text-dim);
+  }
+  .group-name:hover{ color: var(--text); }
+  .group-count{ font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-faint); }
+  .group-sort{
+    margin-left: auto; background: none; border: none; color: var(--text-faint);
+    font-size: 12px; opacity: 0; padding: 2px 6px;
+  }
+  .group-header:hover .group-sort{ opacity: .55; }
+  .group-sort:hover{ opacity: 1 !important; color: var(--accent); }
+  .group-del{
+    background: none; border: none; color: var(--text-faint);
+    font-size: 16px; opacity: 0; padding: 2px 8px;
+  }
+  .group-header:hover .group-del{ opacity: .5; }
+  .group-del:hover{ opacity: 1 !important; color: var(--neg); }
+
+  .group-body{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 14px; padding: 4px 2px 18px;
+  }
+  .group-body.collapsed{ display: none; }
+  .group-empty{
+    grid-column: 1 / -1; font-size: 12px; color: var(--text-faint); padding: 10px 8px 4px; font-style: normal;
+  }
+
+  .sym-row{
+    display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    border-top: 2px solid var(--border); border-bottom: 2px solid transparent; overflow: hidden;
+    cursor: pointer;
+  }
+  .sym-row:hover{ border-color: var(--border-hover); border-top-color: var(--border-hover); border-bottom-color: transparent; }
+  .sym-row.dragging{ opacity: .35; }
+  .sym-row.drop-before{ border-top-color: var(--accent) !important; }
+  .sym-row.drop-after{ border-bottom-color: var(--accent) !important; }
+
+  .row-topbar{
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 8px 10px 6px; border-bottom: 1px solid var(--border);
+  }
+  .drag-handle{
+    color: var(--text-faint); font-size: 14px; cursor: grab; padding: 2px 4px; opacity: .35; flex-shrink: 0;
+  }
+  .sym-row:hover .drag-handle{ opacity: .9; }
+  .row-fullsymbol{
+    flex: 1 1 auto; min-width: 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600;
+    color: var(--text); letter-spacing: .02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .row-widget-wrap{ width: 100%; height: 190px; pointer-events: none; }
+  .row-widget-wrap .tradingview-widget-container{ width: 100%; height: 100%; }
+
+  .row-footer{
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; font-size: 11px; color: var(--text-faint);
+  }
+  .row-footer .open-hint{ color: var(--text-faint); }
+  .sym-row:hover .row-footer .open-hint{ color: var(--accent); }
+
+  .remove-btn{
+    background: none; border: none; color: var(--text-faint); font-size: 18px; line-height: 1;
+    padding: 2px 6px; border-radius: 4px; opacity: 0; flex-shrink: 0; pointer-events: auto;
+  }
+  .sym-row:hover .remove-btn{ opacity: .6; }
+  .remove-btn:hover{ opacity: 1 !important; color: var(--neg); background: rgba(255,92,92,0.1); }
+
+  .empty-state{
+    border: 1px dashed var(--border); border-radius: var(--radius); padding: 48px 24px;
+    text-align: center; color: var(--text-dim); font-size: 14px; line-height: 1.7;
+  }
+
+  footer{
+    margin-top: 40px; color: var(--text-faint); font-size: 12px; line-height: 1.7;
+    border-top: 1px solid var(--border); padding-top: 18px;
+  }
+
+  #importFile{ display: none; }
+
+  @media (max-width: 560px){
+    .wrap{ padding: 20px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="topbar">
+    <span class="app-title">Watchlist</span>
+    <div class="topbar-right">
+      <span class="count-pill"><b id="totalCount">0</b> 支 · <b id="totalLists">0</b> 分类</span>
+      <button class="icon-btn" id="addToggleBtn" title="添加股票">+</button>
+    </div>
+  </header>
+
+  <div class="list-tabs" id="listTabs"></div>
+
+  <div class="panel add-panel" id="addPanel">
+    <div class="active-list-label">添加到分类 <b id="activeListName">—</b></div>
+    <div class="add-row">
+      <div class="field">
+        <label for="symbolInput">股票代码（交易所:代码）</label>
+        <input type="text" id="symbolInput" class="mono-input" placeholder="NASDAQ:AAPL" />
+      </div>
+      <div class="field">
+        <label for="nameInput">名称（可省略）</label>
+        <input type="text" id="nameInput" placeholder="Apple Inc." />
+      </div>
+      <div class="field" style="flex: 0 1 160px;">
+        <label for="groupSelect">分组</label>
+        <select id="groupSelect"></select>
+      </div>
+      <button class="btn" id="addBtn">+ 添加</button>
+    </div>
+    <details class="hint-details">
+      <summary>代码格式说明</summary>
+      <div class="hint">
+        美股: <span class="mono">NASDAQ:AAPL</span> · <span class="mono">NYSE:TSLA</span>　大马股: <span class="mono">MYX:1155</span>（大众银行）· <span class="mono">MYX:5225</span>（IOI）　加密货币: <span class="mono">BINANCE:BTCUSDT</span>　指数: <span class="mono">INDEX:SPX</span>。不确定代码就到 <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView 搜索一下 ↗</a> 再复制过来。
+      </div>
+    </details>
+    <button class="toggle-bulk" id="toggleBulk">批量添加多支股票 ▾</button>
+    <div class="bulk-area" id="bulkArea">
+      <textarea id="bulkInput" placeholder="一行一支，或用逗号分开，例如：&#10;NASDAQ:AAPL, NYSE:TSLA&#10;MYX:1155&#10;BINANCE:BTCUSDT"></textarea>
+      <div>
+        <button class="btn" id="bulkAddBtn">批量添加到「<span id="bulkTargetName"></span>」分组</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="field search-box">
+      <input type="text" id="searchInput" placeholder="在当前分类里搜索代码或名称…" />
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="util-buttons">
+      <button class="btn-ghost" id="newGroupBtn">+ 新分组</button>
+      <div class="menu-wrap">
+        <button class="icon-btn" id="moreMenuBtn" title="更多">⋯</button>
+        <div class="dropdown-menu" id="moreMenu">
+          <button id="expandAllBtn">全部展开</button>
+          <button id="collapseAllBtn">全部收起</button>
+          <button id="exportBtn">导出全部分类</button>
+          <button id="importBtn">导入</button>
+          <button id="clearBtn" class="menu-danger">清空此分类</button>
+        </div>
+      </div>
+      <input type="file" id="importFile" accept=".json" />
+    </div>
+  </div>
+
+  <div class="groups-wrap" id="groupsWrap"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    这个分类还没有股票。<br/>在上方输入代码后按「+ 添加」，或用「批量添加」一次贴上多支。
+  </div>
+
+  <footer>
+自动保存到云端 · 也可以从「⋯」导出备份。
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const API_BASE = '';
+
+  function genId(prefix){
+    return (prefix || 'id') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  async function loadState(){
+    try{
+      const res = await fetch(`${API_BASE}/api/getState`, { method: 'GET' });
+      if(res.ok){
+        const data = await res.json();
+        if(data && data.lists && Array.isArray(data.lists) && data.lists.length){
+          return data;
+        }
+      }
+    }catch(e){
+      console.error('Failed to load state from API:', e);
+    }
+    // Fallback: empty state
+    const listId = genId('l');
+    return { lists: [{ id: listId, name: '默认', groups: [{ id: genId('g'), name: '股票', collapsed: false, symbols: [] }] }], activeListId: listId };
+  }
+
+  let savePending = null;
+  function saveState(){
+    clearTimeout(savePending);
+    savePending = setTimeout(async () => {
+      try{
+        const res = await fetch(`${API_BASE}/api/setState`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state)
+        });
+        if(!res.ok){
+          const msg = await res.text();
+          throw new Error(`Save failed (${res.status}): ${msg}`);
+        }
+      }catch(e){
+        console.error('Failed to save state to API:', e);
+      }
+    }, 300);
+  }
+
+  let state = null;
+  loadState().then(s => { state = s; render(); });
+  let activeFilter = 'ALL';
+  let searchTerm = '';
+  let dragState = null; // { type: 'row', groupId, index } | { type: 'group', index }
+
+  const groupsWrap = document.getElementById('groupsWrap');
+  const emptyState = document.getElementById('emptyState');
+  const totalCount = document.getElementById('totalCount');
+  const totalLists = document.getElementById('totalLists');
+  const listTabsEl = document.getElementById('listTabs');
+  const chipsEl = document.getElementById('chips');
+  const activeListNameEl = document.getElementById('activeListName');
+  const bulkTargetNameEl = document.getElementById('bulkTargetName');
+  const groupSelect = document.getElementById('groupSelect');
+
+  function getActiveList(){
+    return state.lists.find(l => l.id === state.activeListId) || state.lists[0];
+  }
+
+  function normalizeSymbol(raw){
+    return raw.trim().toUpperCase().replace(/\s+/g,'');
+  }
+  function exchangeOf(symbol){
+    const parts = symbol.split(':');
+    return parts.length > 1 ? parts[0] : 'OTHER';
+  }
+  function tickerOf(symbol){
+    const parts = symbol.split(':');
+    return parts.length > 1 ? parts[1] : parts[0];
+  }
+
+  function addSymbolToGroup(group, rawSymbol, name){
+    const symbol = normalizeSymbol(rawSymbol);
+    if(!symbol || !symbol.includes(':')) return false;
+    const list = getActiveList();
+    const alreadyInList = list.groups.some(g => g.symbols.some(item => item.symbol === symbol));
+    if(alreadyInList) return false;
+    group.symbols.push({ symbol, name: (name || '').trim() });
+    return true;
+  }
+
+  function removeSymbol(groupId, symbol){
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === groupId);
+    if(!group) return;
+    group.symbols = group.symbols.filter(item => item.symbol !== symbol);
+    saveState();
+    render();
+  }
+
+  // --- List (watchlist) management ---
+  function createList(name){
+    const id = genId('l');
+    state.lists.push({ id, name, groups: [{ id: genId('g'), name: '股票', collapsed: false, symbols: [] }] });
+    state.activeListId = id;
+    activeFilter = 'ALL'; searchTerm = '';
+    document.getElementById('searchInput').value = '';
+    saveState(); render();
+  }
+  function renameList(id, newName){
+    const list = state.lists.find(l => l.id === id);
+    if(list && newName.trim()){ list.name = newName.trim(); saveState(); render(); }
+  }
+  function deleteList(id){
+    if(state.lists.length <= 1){ alert('至少要留一个分类。想清空的话可以用「清空此分类」。'); return; }
+    const list = state.lists.find(l => l.id === id);
+    const total = list.groups.reduce((s,g) => s + g.symbols.length, 0);
+    if(!confirm(`确定要删除分类「${list.name}」吗？里面的 ${total} 支股票会一起删掉。`)) return;
+    state.lists = state.lists.filter(l => l.id !== id);
+    if(state.activeListId === id) state.activeListId = state.lists[0].id;
+    activeFilter = 'ALL';
+    saveState(); render();
+  }
+  function switchList(id){
+    state.activeListId = id;
+    activeFilter = 'ALL'; searchTerm = '';
+    document.getElementById('searchInput').value = '';
+    saveState();
+    render();
+  }
+
+  // --- Group management ---
+  function createGroup(name){
+    const list = getActiveList();
+    list.groups.push({ id: genId('g'), name, collapsed: false, symbols: [] });
+    saveState(); render();
+  }
+  function renameGroup(id, newName){
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === id);
+    if(group && newName.trim()){ group.name = newName.trim(); saveState(); render(); }
+  }
+  function deleteGroup(id){
+    const list = getActiveList();
+    if(list.groups.length <= 1){ alert('这个分类至少要留一个分组。'); return; }
+    const group = list.groups.find(g => g.id === id);
+    if(!confirm(`确定要删除分组「${group.name}」吗？里面的 ${group.symbols.length} 支股票会一起删掉。`)) return;
+    list.groups = list.groups.filter(g => g.id !== id);
+    saveState(); render();
+  }
+  function toggleGroupCollapse(id){
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === id);
+    if(group){ group.collapsed = !group.collapsed; saveState(); render(); }
+  }
+  function setAllGroupsCollapsed(collapsed){
+    getActiveList().groups.forEach(g => g.collapsed = collapsed);
+    saveState(); render();
+  }
+  function sortGroupAlpha(id){
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === id);
+    if(!group) return;
+    group.symbols.sort((a, b) => tickerOf(a.symbol).localeCompare(tickerOf(b.symbol)));
+    saveState(); render();
+  }
+
+  // --- Drag & drop reordering ---
+  function moveSymbol(fromGroupId, fromIndex, toGroupId, toIndex){
+    const list = getActiveList();
+    const fromGroup = list.groups.find(g => g.id === fromGroupId);
+    const toGroup = list.groups.find(g => g.id === toGroupId);
+    if(!fromGroup || !toGroup) return;
+    const [item] = fromGroup.symbols.splice(fromIndex, 1);
+    if(!item) return;
+    if(fromGroup === toGroup && toIndex > fromIndex) toIndex--;
+    toIndex = Math.max(0, Math.min(toIndex, toGroup.symbols.length));
+    toGroup.symbols.splice(toIndex, 0, item);
+    saveState(); render();
+  }
+  function moveGroup(fromIndex, toIndex){
+    const list = getActiveList();
+    const [g] = list.groups.splice(fromIndex, 1);
+    if(!g) return;
+    if(toIndex > fromIndex) toIndex--;
+    toIndex = Math.max(0, Math.min(toIndex, list.groups.length));
+    list.groups.splice(toIndex, 0, g);
+    saveState(); render();
+  }
+
+  function buildListTabs(){
+    listTabsEl.innerHTML = '';
+    state.lists.forEach(list => {
+      const tab = document.createElement('button');
+      tab.className = 'list-tab' + (list.id === state.activeListId ? ' active' : '');
+      const total = list.groups.reduce((s,g) => s + g.symbols.length, 0);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'tab-name';
+      nameSpan.textContent = list.name;
+      nameSpan.ondblclick = (e) => {
+        e.stopPropagation();
+        const newName = prompt('重新命名这个分类：', list.name);
+        if(newName !== null) renameList(list.id, newName);
+      };
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'tab-count';
+      countSpan.textContent = `(${total})`;
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'tab-del';
+      delBtn.textContent = '×';
+      delBtn.title = '删除分类';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteList(list.id); };
+
+      tab.appendChild(nameSpan);
+      tab.appendChild(countSpan);
+      tab.appendChild(delBtn);
+      tab.onclick = () => switchList(list.id);
+      listTabsEl.appendChild(tab);
+    });
+
+    const addTab = document.createElement('button');
+    addTab.className = 'add-list-tab';
+    addTab.textContent = '+ 新分类';
+    addTab.onclick = () => {
+      const name = prompt('新分类的名字，例如「美股」「大马股」「短线」：');
+      if(name && name.trim()) createList(name.trim());
+    };
+    listTabsEl.appendChild(addTab);
+  }
+
+  function buildChips(activeList){
+    const exchanges = {};
+    let total = 0;
+    activeList.groups.forEach(g => g.symbols.forEach(item => {
+      const ex = exchangeOf(item.symbol);
+      exchanges[ex] = (exchanges[ex] || 0) + 1;
+      total++;
+    }));
+    const keys = Object.keys(exchanges).sort();
+
+    chipsEl.innerHTML = '';
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (activeFilter === 'ALL' ? ' active' : '');
+    allChip.textContent = `全部 (${total})`;
+    allChip.onclick = () => { activeFilter = 'ALL'; render(); };
+    chipsEl.appendChild(allChip);
+
+    keys.forEach(ex => {
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (activeFilter === ex ? ' active' : '');
+      chip.textContent = `${ex} (${exchanges[ex]})`;
+      chip.onclick = () => { activeFilter = ex; render(); };
+      chipsEl.appendChild(chip);
+    });
+  }
+
+  function populateGroupSelect(activeList){
+    const prev = groupSelect.value;
+    groupSelect.innerHTML = '';
+    activeList.groups.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      groupSelect.appendChild(opt);
+    });
+    if(activeList.groups.some(g => g.id === prev)) groupSelect.value = prev;
+    bulkTargetNameEl.textContent = (activeList.groups.find(g => g.id === groupSelect.value) || activeList.groups[0] || {}).name || '';
+  }
+
+  function matchesFilterAndSearch(item){
+    const matchesFilter = activeFilter === 'ALL' || exchangeOf(item.symbol) === activeFilter;
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = !term ||
+      item.symbol.toLowerCase().includes(term) ||
+      (item.name || '').toLowerCase().includes(term);
+    return matchesFilter && matchesSearch;
+  }
+
+  function clearRowDropMarks(){
+    groupsWrap.querySelectorAll('.drop-before, .drop-after').forEach(el => {
+      el.classList.remove('drop-before', 'drop-after');
+    });
+    groupsWrap.querySelectorAll('.group-block.drag-over').forEach(el => el.classList.remove('drag-over'));
+  }
+
+  function createRow(item, groupId, index){
+    const symbol = item.symbol;
+
+    const row = document.createElement('div');
+    row.className = 'sym-row';
+    row.draggable = true;
+
+    let allowDrag = false;
+    row.addEventListener('mousedown', (e) => {
+      allowDrag = !!e.target.closest('.drag-handle');
+    });
+
+    const topbar = document.createElement('div');
+    topbar.className = 'row-topbar';
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.textContent = '⠿';
+    handle.title = '拖动排序';
+    topbar.appendChild(handle);
+
+    const fullSym = document.createElement('span');
+    fullSym.className = 'row-fullsymbol';
+    fullSym.textContent = symbol;
+    topbar.appendChild(fullSym);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '×';
+    removeBtn.title = '移除';
+    removeBtn.onclick = (e) => { e.stopPropagation(); removeSymbol(groupId, symbol); };
+    topbar.appendChild(removeBtn);
+    row.appendChild(topbar);
+
+    const widgetWrap = document.createElement('div');
+    widgetWrap.className = 'row-widget-wrap';
+    const widgetContainer = document.createElement('div');
+    widgetContainer.className = 'tradingview-widget-container';
+    const widgetInner = document.createElement('div');
+    widgetInner.className = 'tradingview-widget-container__widget';
+    widgetContainer.appendChild(widgetInner);
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
+    script.async = true;
+    script.text = JSON.stringify({
+      symbol: symbol,
+      colorTheme: 'dark',
+      isTransparent: true,
+      dateRange: '3M',
+      locale: 'en',
+      autosize: true
+    });
+    widgetContainer.appendChild(script);
+    widgetWrap.appendChild(widgetContainer);
+    row.appendChild(widgetWrap);
+
+    const rowFooter = document.createElement('div');
+    rowFooter.className = 'row-footer';
+    const exTag = document.createElement('span');
+    exTag.textContent = exchangeOf(symbol);
+    const openHint = document.createElement('span');
+    openHint.className = 'open-hint';
+    openHint.textContent = '点击卡片看完整图表 ↗';
+    rowFooter.appendChild(exTag);
+    rowFooter.appendChild(openHint);
+    row.appendChild(rowFooter);
+
+    const targetUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`;
+    row.addEventListener('click', (e) => {
+      if(e.target.closest('.remove-btn')) return;
+      if(e.target.closest('.drag-handle')) return;
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    row.addEventListener('dragstart', (e) => {
+      if(!allowDrag){ e.preventDefault(); return; }
+      dragState = { type: 'row', groupId, index };
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try{ e.dataTransfer.setData('text/plain', symbol); }catch(err){}
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      clearRowDropMarks();
+      dragState = null;
+    });
+    row.addEventListener('dragover', (e) => {
+      if(!dragState || dragState.type !== 'row') return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      clearRowDropMarks();
+      row.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+    row.addEventListener('drop', (e) => {
+      if(!dragState || dragState.type !== 'row') return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      const targetIndex = before ? index : index + 1;
+      moveSymbol(dragState.groupId, dragState.index, groupId, targetIndex);
+      clearRowDropMarks();
+      dragState = null;
+    });
+
+    return row;
+  }
+
+  function createGroupBlock(group, groupIndex){
+    const list = getActiveList();
+    const block = document.createElement('div');
+    block.className = 'group-block';
+
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.draggable = true;
+
+    let allowGroupDrag = false;
+    header.addEventListener('mousedown', (e) => {
+      allowGroupDrag = !!e.target.closest('.group-drag-handle');
+    });
+
+    const gHandle = document.createElement('span');
+    gHandle.className = 'group-drag-handle';
+    gHandle.textContent = '⠿';
+    gHandle.title = '拖动排序分组';
+    header.appendChild(gHandle);
+
+    const chevron = document.createElement('span');
+    chevron.className = 'chevron';
+    chevron.textContent = group.collapsed ? '▸' : '▾';
+    header.appendChild(chevron);
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'group-name';
+    nameEl.textContent = group.name;
+    nameEl.ondblclick = (e) => {
+      e.stopPropagation();
+      const newName = prompt('重新命名这个分组：', group.name);
+      if(newName !== null) renameGroup(group.id, newName);
+    };
+    header.appendChild(nameEl);
+
+    const countEl = document.createElement('span');
+    countEl.className = 'group-count';
+    countEl.textContent = `(${group.symbols.length})`;
+    header.appendChild(countEl);
+
+    const sortBtn = document.createElement('button');
+    sortBtn.className = 'group-sort';
+    sortBtn.title = '按代码字母排序';
+    sortBtn.textContent = 'A→Z';
+    sortBtn.onclick = (e) => { e.stopPropagation(); sortGroupAlpha(group.id); };
+    header.appendChild(sortBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'group-del';
+    delBtn.title = '删除分组';
+    delBtn.textContent = '×';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteGroup(group.id); };
+    header.appendChild(delBtn);
+
+    header.addEventListener('click', (e) => {
+      if(e.target.closest('.group-del') || e.target.closest('.group-sort') || e.target.closest('.group-name') || e.target.closest('.group-drag-handle')) return;
+      toggleGroupCollapse(group.id);
+    });
+
+    header.addEventListener('dragstart', (e) => {
+      if(!allowGroupDrag){ e.preventDefault(); return; }
+      dragState = { type: 'group', index: groupIndex };
+      e.dataTransfer.effectAllowed = 'move';
+      try{ e.dataTransfer.setData('text/plain', group.name); }catch(err){}
+    });
+    header.addEventListener('dragend', () => { clearRowDropMarks(); dragState = null; });
+    header.addEventListener('dragover', (e) => {
+      if(!dragState || dragState.type !== 'group') return;
+      e.preventDefault();
+    });
+    header.addEventListener('drop', (e) => {
+      if(!dragState || dragState.type !== 'group') return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = header.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      moveGroup(dragState.index, before ? groupIndex : groupIndex + 1);
+      dragState = null;
+    });
+
+    block.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'group-body' + (group.collapsed ? ' collapsed' : '');
+
+    const visibleItems = group.symbols
+      .map((item, idx) => ({ item, idx }))
+      .filter(({ item }) => matchesFilterAndSearch(item));
+
+    visibleItems.forEach(({ item, idx }) => {
+      body.appendChild(createRow(item, group.id, idx));
+    });
+
+    if(group.symbols.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'group-empty';
+      empty.textContent = '这个分组还没有股票 — 可以从上面添加，或把其他分组的股票拖过来。';
+      body.appendChild(empty);
+    }
+
+    // Fallback drop target: dropping on empty space appends to the end of this group.
+    body.addEventListener('dragover', (e) => {
+      if(!dragState) return;
+      e.preventDefault();
+      if(dragState.type === 'row') block.classList.add('drag-over');
+    });
+    body.addEventListener('dragleave', (e) => {
+      if(!body.contains(e.relatedTarget)) block.classList.remove('drag-over');
+    });
+    body.addEventListener('drop', (e) => {
+      if(!dragState || dragState.type !== 'row') return;
+      e.preventDefault();
+      if(e.target === body){
+        moveSymbol(dragState.groupId, dragState.index, group.id, group.symbols.length);
+      }
+      block.classList.remove('drag-over');
+      dragState = null;
+    });
+
+    block.appendChild(body);
+    return { block, hasVisible: visibleItems.length > 0, hasAny: group.symbols.length > 0 };
+  }
+
+  function render(){
+    const activeList = getActiveList();
+
+    buildListTabs();
+    buildChips(activeList);
+    populateGroupSelect(activeList);
+
+    activeListNameEl.textContent = activeList.name;
+    groupSelect.onchange = () => {
+      bulkTargetNameEl.textContent = (activeList.groups.find(g => g.id === groupSelect.value) || {}).name || '';
+    };
+
+    groupsWrap.innerHTML = '';
+    const filtering = activeFilter !== 'ALL' || !!searchTerm;
+    let anySymbolInList = false;
+
+    activeList.groups.forEach((group, idx) => {
+      if(group.symbols.length) anySymbolInList = true;
+      const { block, hasVisible, hasAny } = createGroupBlock(group, idx);
+      if(filtering && hasAny && !hasVisible) return; // hide groups with no matches while filtering
+      groupsWrap.appendChild(block);
+    });
+
+    const grandTotal = state.lists.reduce((sum, l) => sum + l.groups.reduce((s,g) => s + g.symbols.length, 0), 0);
+    totalCount.textContent = grandTotal;
+    totalLists.textContent = state.lists.length;
+
+    emptyState.style.display = anySymbolInList ? 'none' : 'block';
+    groupsWrap.style.display = anySymbolInList ? 'flex' : 'none';
+    groupsWrap.style.flexDirection = 'column';
+  }
+
+  // --- Add single ---
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const symbolInput = document.getElementById('symbolInput');
+    const nameInput = document.getElementById('nameInput');
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === groupSelect.value) || list.groups[0];
+    if(addSymbolToGroup(group, symbolInput.value, nameInput.value)){
+      saveState();
+      symbolInput.value = ''; nameInput.value = '';
+      render();
+    }else if(symbolInput.value.trim()){
+      alert('格式不对，或已经在这个分类里了。请用「交易所:代码」的格式，例如 NASDAQ:AAPL');
+    }
+    symbolInput.focus();
+  });
+  document.getElementById('symbolInput').addEventListener('keydown', (e) => { if(e.key === 'Enter') document.getElementById('addBtn').click(); });
+  document.getElementById('nameInput').addEventListener('keydown', (e) => { if(e.key === 'Enter') document.getElementById('addBtn').click(); });
+
+  // --- New group ---
+  document.getElementById('newGroupBtn').addEventListener('click', () => {
+    const name = prompt('新分组的名字，例如「INDICES」「STOCKS」「FUTURES」：');
+    if(name && name.trim()) createGroup(name.trim());
+  });
+
+  // --- Add-panel toggle ---
+  const addPanel = document.getElementById('addPanel');
+  document.getElementById('addToggleBtn').addEventListener('click', () => {
+    addPanel.classList.toggle('open');
+    if(addPanel.classList.contains('open')) document.getElementById('symbolInput').focus();
+  });
+
+  // --- Overflow menu ---
+  const moreMenu = document.getElementById('moreMenu');
+  document.getElementById('moreMenuBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    moreMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => moreMenu.classList.remove('open'));
+  document.getElementById('expandAllBtn').addEventListener('click', () => setAllGroupsCollapsed(false));
+  document.getElementById('collapseAllBtn').addEventListener('click', () => setAllGroupsCollapsed(true));
+
+  // --- Bulk add ---
+  const toggleBulk = document.getElementById('toggleBulk');
+  const bulkArea = document.getElementById('bulkArea');
+  toggleBulk.addEventListener('click', () => {
+    bulkArea.classList.toggle('open');
+    toggleBulk.textContent = bulkArea.classList.contains('open') ? '批量添加多支股票 ▴' : '批量添加多支股票 ▾';
+  });
+  document.getElementById('bulkAddBtn').addEventListener('click', () => {
+    const raw = document.getElementById('bulkInput').value;
+    const tokens = raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+    const list = getActiveList();
+    const group = list.groups.find(g => g.id === groupSelect.value) || list.groups[0];
+    let added = 0, skipped = 0;
+    tokens.forEach(tok => { if(addSymbolToGroup(group, tok, '')) added++; else skipped++; });
+    saveState();
+    document.getElementById('bulkInput').value = '';
+    render();
+    if(added || skipped){
+      alert(`添加了 ${added} 支到「${group.name}」${skipped ? `，跳过 ${skipped} 支（格式不对或重复）` : ''}。`);
+    }
+  });
+
+  // --- Search & filter ---
+  document.getElementById('searchInput').addEventListener('input', (e) => { searchTerm = e.target.value; render(); });
+
+  // --- Export / Import / Clear ---
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const data = state.lists.map(l => ({
+      name: l.name,
+      groups: l.groups.map(g => ({ name: g.name, symbols: g.symbols }))
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'watchlist-categories.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  const importFile = document.getElementById('importFile');
+  document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const file = importFile.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(!Array.isArray(data)) throw new Error('bad format');
+        let addedSymbols = 0, addedLists = 0, addedGroups = 0;
+        data.forEach(incoming => {
+          if(!incoming || !incoming.name) return;
+          let targetList = state.lists.find(l => l.name === incoming.name);
+          if(!targetList){
+            targetList = { id: genId('l'), name: incoming.name, groups: [] };
+            state.lists.push(targetList);
+            addedLists++;
+          }
+          const incomingGroups = Array.isArray(incoming.groups) ? incoming.groups
+            : (Array.isArray(incoming.symbols) ? [{ name: '股票', symbols: incoming.symbols }] : []);
+          incomingGroups.forEach(incGroup => {
+            if(!incGroup || !incGroup.name || !Array.isArray(incGroup.symbols)) return;
+            let targetGroup = targetList.groups.find(g => g.name === incGroup.name);
+            if(!targetGroup){
+              targetGroup = { id: genId('g'), name: incGroup.name, collapsed: false, symbols: [] };
+              targetList.groups.push(targetGroup);
+              addedGroups++;
+            }
+            incGroup.symbols.forEach(item => {
+              if(item && item.symbol){
+                const symbol = normalizeSymbol(item.symbol);
+                const already = targetList.groups.some(g => g.symbols.some(s => s.symbol === symbol));
+                if(!already){ targetGroup.symbols.push({ symbol, name: item.name || '' }); addedSymbols++; }
+              }
+            });
+          });
+          if(targetList.groups.length === 0){
+            targetList.groups.push({ id: genId('g'), name: '股票', collapsed: false, symbols: [] });
+          }
+        });
+        saveState(); render();
+        alert(`导入完成：新增 ${addedLists} 个分类，${addedGroups} 个分组，${addedSymbols} 支股票。`);
+      }catch(e){
+        alert('这个文件读不了，确认是从「导出全部分类」得到的 JSON 文件。');
+      }
+      importFile.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    const list = getActiveList();
+    const total = list.groups.reduce((s,g) => s + g.symbols.length, 0);
+    if(total === 0) return;
+    if(confirm(`确定要清空「${list.name}」里的 ${total} 支股票吗？分组会保留，建议先导出备份。`)){
+      list.groups.forEach(g => g.symbols = []);
+      saveState(); render();
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
